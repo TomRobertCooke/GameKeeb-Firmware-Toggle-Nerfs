@@ -34,6 +34,10 @@ if (DEFINED $ENV{GC_3V3_PIN})
     )
 endif ()
 
+add_compile_definitions(
+    GC_NERF_ON=$ENV{GC_NERF_ON}
+)
+
 include_directories(
     include
     lib/joybus-pio/include
@@ -46,6 +50,11 @@ add_executable(GameKeeb
     src/inputs.cpp
     src/keymap.cpp
     src/runtime_remapping.cpp
+    src/nerfs/modes/Melee20Button.cpp
+    src/nerfs/modes/MeleeLimits.cpp
+    src/nerfs/core/ControllerMode.cpp
+    src/nerfs/core/InputMode.cpp
+    src/nerfs/core/socd.cpp
     lib/joybus-pio/src/GamecubeConsole.cpp
     lib/joybus-pio/src/joybus.c
 )

@@ -12,10 +12,20 @@
 #include "pico/bootrom.h"
 #include "pico/multicore.h"
 #include "pico/time.h"
+#include "hardware/clocks.h"
+
+#include "nerfs/modes/MeleeLimits.hpp"
+#include "nerfs/core/state.hpp"
 
 #define LED_PIN 25
 
 #define NUMBER_OF_INPUTS 24
+
+// nerfs constants
+#define SAMPLE_SPACING 1000U // 1 unit = 4 microseconds
+
+// logging
+#define OSC_PIN 16
 
 void joybus_loop();
 
@@ -26,11 +36,14 @@ bool mode_selected = false;
 RectangleInput rectangleInput;
 gc_report_t gcReport = default_gc_report;
 
+const bool _nerfOn = GC_NERF_ON;
+const uint8_t leadTime = 35; // estimated 35us to poll keyboard and convert to haybox input format
+
 int main() {
     board_init();
 
-    // Clock at 130MHz
-    set_sys_clock_khz(130'000, true);
+    // Clock at 200MHz
+    set_sys_clock_khz(200'000, true);
 
     stdio_init_all();
 
@@ -59,7 +72,20 @@ int main() {
 
     tusb_init();
 
+    //Testing with oscilloscope
+    gpio_init(OSC_PIN);
+    gpio_set_dir(OSC_PIN, GPIO_OUT);
+
+    uint64_t lastLoopEnd = get_absolute_time();
+    
     while (1) {
+        
+        if (_nerfOn) 
+        {   
+            busy_wait_until(lastLoopEnd + SAMPLE_SPACING);
+            lastLoopEnd = get_absolute_time();
+        }
+
         // Poll keyboard
         tuh_task();
         if (!mode_selected) {
@@ -74,13 +100,25 @@ int main() {
             }
         }
 
-        /* TODO: Shouldn't be doing this stuff on every iteration, but only when we
-            actually get a report from the keyboard. */
         // Map keyboard inputs to rectangle button state.
         rectangleInput = getRectangleInput(&usb_keyboard_report);
 
-        // Map rectangle button state to GC controller state.
-        makeReport(rectangleInput, &gcReport);
+        if (_nerfOn) {
+            // Implement Ruleset Nerfs
+            InputState inputs;
+            OutputState outputs;
+            getIOStates(rectangleInput, inputs, outputs);
+
+            OutputState nerfedOutputs;
+            gpio_put(OSC_PIN, 1);
+            limitOutputs(SAMPLE_SPACING / 4, _nerfOn ? AB_A : AB_B, inputs, outputs, nerfedOutputs);
+            gpio_put(OSC_PIN, 0);
+            makeNerfedReport(nerfedOutputs, &gcReport);
+        } else {
+
+            // Map rectangle button state to GC controller state.
+            makeReport(rectangleInput, &gcReport);
+        }
     }
 
     return 1;
