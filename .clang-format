@@ -26,7 +26,6 @@ ContinuationIndentWidth: 4
 Cpp11BracedListStyle: false
 DeriveLineEnding: true
 FixNamespaceComments: false
-IncludeBlocks: Merge
 IndentCaseLabels: true
 IndentWidth: 4
 LambdaBodyIndentation: OuterScope
@@ -35,7 +34,8 @@ NamespaceIndentation: All
 PackConstructorInitializers: CurrentLine
 PointerAlignment: Right
 QualifierAlignment: Custom
-QualifierOrder: ['inline', 'static', 'const', 'constexpr', 'restrict', 'volatile', 'type']
+QualifierOrder:
+  ["inline", "static", "const", "constexpr", "restrict", "volatile", "type"]
 ReferenceAlignment: Right
 ReflowComments: true
 SeparateDefinitionBlocks: Always
@@ -45,15 +45,15 @@ SpacesInLineCommentPrefix:
   Maximum: 1
 IncludeBlocks: Regroup
 IncludeCategories:
-  - Regex:           '"[[:alnum:]._-]+"'
-    Priority:        1
-    SortPriority:    1
-  - Regex:           '^((<|").*/)'
-    Priority:        2
-    SortPriority:    2
-  - Regex:           '<[[:alnum:]._-]+>'
-    Priority:        3
-    SortPriority:    3
+  - Regex: '"[[:alnum:]._-]+"'
+    Priority: 1
+    SortPriority: 1
+  - Regex: '^((<|").*/)'
+    Priority: 2
+    SortPriority: 2
+  - Regex: "<[[:alnum:]._-]+>"
+    Priority: 3
+    SortPriority: 3
 SortUsingDeclarations: false
 SpaceBeforeCtorInitializerColon: true
 SpacesInContainerLiterals: false
