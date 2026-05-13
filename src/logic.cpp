@@ -16,7 +16,7 @@ typedef enum {
     SOCD_2IP_NO_REAC,
 } SocdType;
 
-const SocdType socd = SOCD_2IP_NO_REAC;
+const SocdType socd = SOCD_NEUTRAL;
 
 // 2 IP declarations
 bool left_wasPressed = false;

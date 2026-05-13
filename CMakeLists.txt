@@ -34,9 +34,13 @@ if (DEFINED $ENV{GC_3V3_PIN})
     )
 endif ()
 
-add_compile_definitions(
-    GC_NERF_ON=$ENV{GC_NERF_ON}
-)
+message(CHECK_START "Reading DEBUG_PIN")
+if (DEFINED DEBUG_PIN)
+    message(CHECK_PASS "on, " ${DEBUG_PIN})
+    add_compile_definitions(DEBUG_PIN=${DEBUG_PIN})
+else()
+    message(CHECK_FAIL "off")
+endif ()
 
 include_directories(
     include

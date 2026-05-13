@@ -7,15 +7,14 @@
 #include "tusb.h"
 
 #include "bsp/board.h"
+#include "hardware/clocks.h"
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
+#include "nerfs/core/state.hpp"
+#include "nerfs/modes/MeleeLimits.hpp"
 #include "pico/bootrom.h"
 #include "pico/multicore.h"
 #include "pico/time.h"
-#include "hardware/clocks.h"
-
-#include "nerfs/modes/MeleeLimits.hpp"
-#include "nerfs/core/state.hpp"
 
 #define LED_PIN 25
 
@@ -25,7 +24,6 @@
 #define SAMPLE_SPACING 1000U // 1 unit = 4 microseconds
 
 // logging
-#define OSC_PIN 16
 
 void joybus_loop();
 
@@ -36,9 +34,6 @@ bool mode_selected = false;
 RectangleInput rectangleInput;
 gc_report_t gcReport = default_gc_report;
 
-const bool _nerfOn = GC_NERF_ON;
-const uint8_t leadTime = 35; // estimated 35us to poll keyboard and convert to haybox input format
-
 int main() {
     board_init();
 
@@ -47,7 +42,7 @@ int main() {
 
     stdio_init_all();
 
-    gpio_init(LED_PIN);
+    gpio_init(LED_PIN); // TODO: light up tactile switch LED on regular startup
     gpio_set_dir(LED_PIN, GPIO_OUT);
     gpio_put(LED_PIN, 1);
 
@@ -72,16 +67,17 @@ int main() {
 
     tusb_init();
 
-    //Testing with oscilloscope
-    gpio_init(OSC_PIN);
-    gpio_set_dir(OSC_PIN, GPIO_OUT);
+#ifdef DEBUG_PIN // For testing timing with an oscilloscope
+    gpio_init(DEBUG_PIN);
+    gpio_set_dir(DEBUG_PIN, GPIO_OUT);
+#endif
 
-    uint64_t lastLoopEnd = get_absolute_time();
-    
+    bool _nerfOn = false;
+    uint64_t lastLoopEnd;
+
     while (1) {
-        
-        if (_nerfOn) 
-        {   
+
+        if (_nerfOn) {
             busy_wait_until(lastLoopEnd + SAMPLE_SPACING);
             lastLoopEnd = get_absolute_time();
         }
@@ -91,10 +87,33 @@ int main() {
         if (!mode_selected) {
             uint8_t key = findFirstPressedKey(&usb_keyboard_report);
             if (key != 0) {
-                if (key == KC_ESC) {
+                if (key == KC_ESC) { // Remap Mode
                     sleep_ms(3000);
                     multicore_reset_core1();
                     remap();
+                } else if (key == KC_BSPACE) { // Tournament Mode
+
+                    // Brief pause and then blink 3 times
+                    sleep_ms(500);
+                    gpio_put(LED_PIN, 0);
+                    sleep_ms(500);
+                    gpio_put(LED_PIN, 1);
+                    sleep_ms(500);
+                    gpio_put(LED_PIN, 0);
+                    sleep_ms(500);
+                    gpio_put(LED_PIN, 1);
+                    sleep_ms(500);
+                    gpio_put(LED_PIN, 0);
+                    sleep_ms(500);
+                    gpio_put(LED_PIN, 1);
+
+                    _nerfOn = true;
+                    lastLoopEnd = get_absolute_time();
+                } else { // Normal Mode (Unnerfed)
+                    sleep_ms(500);
+                    gpio_put(LED_PIN, 0);
+                    sleep_ms(1000);
+                    gpio_put(LED_PIN, 1);
                 }
                 mode_selected = true;
             }
@@ -110,9 +129,8 @@ int main() {
             getIOStates(rectangleInput, inputs, outputs);
 
             OutputState nerfedOutputs;
-            gpio_put(OSC_PIN, 1);
             limitOutputs(SAMPLE_SPACING / 4, _nerfOn ? AB_A : AB_B, inputs, outputs, nerfedOutputs);
-            gpio_put(OSC_PIN, 0);
+
             makeNerfedReport(nerfedOutputs, &gcReport);
         } else {
 
